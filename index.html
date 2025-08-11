@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Meal Prep Recipes</title>
+<style>
+  /* (same styles as before, omitted here for brevity, use previous styles) */
+  body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    max-width: 700px;
+    margin: auto;
+  }
+  h1, h2, h3 {
+    text-align: center;
+  }
+  #category-filters {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  #category-filters button {
+    margin: 0 6px 10px 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    background: #ddd;
+    transition: background 0.3s;
+  }
+  #category-filters button.active {
+    background: #4a90e2;
+    color: white;
+  }
+  #favorites-toggle {
+    display: inline-block;
+    margin-left: 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+  #search-input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+    font-size: 16px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+  li {
+    background: #f0f0f0;
+    margin: 8px 0;
+    padding: 12px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.3s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  li:hover {
+    background: #d0e6ff;
+  }
+  li span.meal-name {
+    flex-grow: 1;
+    user-select: none;
+  }
+  button.delete-btn {
+    background: #ff6b6b;
+    border: none;
+    color: white;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    margin-left: 10px;
+  }
+  button.delete-btn:hover {
+    background: #ff3b3b;
+  }
+  button.favorite-btn {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    margin-right: 10px;
+    user-select: none;
+  }
+  button.favorite-btn.favorited {
+    color: gold;
+  }
+  #recipe {
+    margin-top: 30px;
+    padding: 15px;
+    background: #e8f4ff;
+    border-radius: 8px;
+    min-height: 180px;
+    position: relative;
+  }
+  #recipe button {
+    margin-top: 10px;
+    margin-right: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 5px;
+    border: none;
+    background: #4a90e2;
+    color: white;
+    transition: background 0.3s;
+  }
+  #recipe button:hover {
+    background: #357abd;
+  }
+  form label {
+    display: block;
+    margin-top: 10px;
+  }
+  form input[type="text"],
+  form textarea,
+  form select {
+    width: 100%;
+    padding: 6px;
+    margin-top: 4px;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 14px;
+  }
+  form textarea {
+    resize: vertical;
+  }
+  #add-new-btn {
+    display: block;
+    margin: 20px auto 10px auto;
+    padding: 10px 20px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  #add-new-btn:hover {
+    background: #218838;
+  }
+  #export-import {
+    margin-top: 20px;
+    text-align: center;
+  }
+  #export-btn, #import-btn {
+    padding: 10px 18px;
+    margin: 5px 10px;
+    cursor: pointer;
+    border-radius: 6px;
+    border: none;
+    background: #4a90e2;
+    color: white;
+    font-size: 15px;
+    transition: background 0.3s;
+  }
+  #export-btn:hover, #import-btn:hover {
+    background: #357abd;
+  }
+  #import-file {
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Meal Prep Recipes</h1>
+
+  <div id="category-filters">
+    <button data-category="All" class="active">All</button>
+    <button data-category="Breakfast">Breakfast</button>
+    <button data-category="Lunch">Lunch</button>
+    <button data-category="Dinner">Dinner</button>
+    <button data-category="Snack">Snack</button>
+    <label id="favorites-toggle">
+      <input type="checkbox" id="fav-checkbox" /> Show Favorites Only
+    </label>
+  </div>
+
+  <input type="text" id="search-input" placeholder="Search meals..." />
+
+  <ul id="meal-list"></ul>
+
+  <button id="add-new-btn">+ Add New Meal</button>
+
+  <div id="recipe">
+    <em>Select a meal to see the recipe!</em>
+  </div>
+
+  <div id="export-import">
+    <button id="export-btn" title="Export all meals as JSON file">Export Meals</button>
+    <button id="import-btn" title="Import meals from JSON file">Import Meals</button>
+    <input type="file" id="import-file" accept=".json" />
+  </div>
+
+<script>
+  const defaultRecipes = {
+    SteakTips: {
+      category: "Dinner",
+      favorite: false,
+      content: `
+        <h2>Steak Tips and Sides</h2>
+        <ul>
+          <li>Steaks - 2 pieces</li>
+          <li>Butter - 2 tbsp</li>
+          <li>Diced Garlic - 2 cloves</li>
+          <li>Potatoes - 2</li>
+          <li>Asparagus - 1 bunch</li>
+          <li>Olive Oil - 2 tbsp</li>
+        </ul>
+        <p>Instructions: Marinate steak with seasoning of choice. Dice garlic, cut potatoes into 8ths, wash and cut asparagus. Boil water and preheat oven to 425°F. Cook potatoes in boiling water and roast asparagus for 10-15 minutes. Cook steaks to taste. Mash potatoes with milk and butter. Serve and enjoy!</p>
+      `
+    },
+    Potpie: {
+      category: "Dinner",
+      favorite: false,
+      content: `
+        <h2>Chicken Pot Pie Bake</h2>
+        <ul>
+          <li>Pasta - 200g</li>
+          <li>Mixed vegetables - 1 cup</li>
+          <li>Olive oil - 2 tbsp</li>
+          <li>Parmesan cheese - 1/4 cup</li>
+        </ul>
+        <p>Instructions: Cook pasta according to package. Sauté vegetables in olive oil. Mix pasta and vegetables, sprinkle with cheese.</p>
+      `
+    },
+    OrangeChicken: {
+      category: "Dinner",
+      favorite: false,
+      content: `
+        <h2>Orange Chicken</h2>
+        <ul>
+          <li>Chicken breast - 1 lb</li>
+          <li>Orange juice - 1/2 cup</li>
+          <li>Soy sauce - 2 tbsp</li>
+          <li>Garlic - 2 cloves minced</li>
+        </ul>
+        <p>Instructions: Cook chicken until golden. Add orange juice, soy sauce, and garlic. Simmer until sauce thickens. Serve hot.</p>
+      `
+    }
+  };
+
+  let recipes = JSON.parse(localStorage.getItem('recipes')) || defaultRecipes;
+  let currentMeal = null;
+  let currentCategory = 'All';
+  let showFavoritesOnly = false;
+
+  const mealList = document.getElementById('meal-list');
+  const recipeDiv = document.getElementById('recipe');
+  const addNewBtn = document.getElementById('add-new-btn');
+  const searchInput = document.getElementById('search-input');
+  const categoryButtons = document.querySelectorAll('#category-filters button[data-category]');
+  const favCheckbox = document.getElementById('fav-checkbox');
+  const exportBtn = document.getElementById('export-btn');
+  const importBtn = document.getElementById('import-btn');
+  const importFileInput = document.getElementById('import-file');
+
+  function extractTitle(html) {
+    if (!html || typeof html !== 'string') return null;
+    const match = html.match(/<h2>(.*?)<\/h2>/);
+    return match ? match[1] : null;
+  }
+
+  function extractIngredients(html) {
+    if (!html || typeof html !== 'string') return '';
+    const matches = [...html.matchAll(/<li>(.*?)<\/li>/g)];
+    return matches.map(m => m[1]).join('\n');
+  }
+
+  function extractInstructions(html) {
+    if (!html || typeof html !== 'string') return '';
+    const match = html.match(/<p>([\s\S]*?)<\/p>/);
+    return match ? match[1] : '';
+  }
+
+  function renderMealList(filter = '') {
+    mealList.innerHTML = '';
+    const filterLower = filter.toLowerCase();
+
+    Object.keys(recipes)
+      .filter(mealKey => {
+        const meal = recipes[mealKey];
+        const title = extractTitle(meal.content) || mealKey;
+
+        if (currentCategory !== 'All' && meal.category !== currentCategory) return false;
+        if (showFavoritesOnly && !meal.favorite) return false;
+        if (!title.toLowerCase().includes(filterLower)) return false;
+
+        return true;
+      })
+      .forEach(mealKey => {
+        const meal = recipes[mealKey];
+
+        const li = document.createElement('li');
+        li.setAttribute('data-meal', mealKey);
+
+        const favBtn = document.createElement('button');
+        favBtn.className = 'favorite-btn';
+        favBtn.innerHTML = meal.favorite ? '⭐' : '☆';
+        if(meal.favorite) favBtn.classList.add('favorited');
+        favBtn.title = meal.favorite ? 'Unmark Favorite' : 'Mark Favorite';
+
+        favBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          meal.favorite = !meal.favorite;
+          saveToStorage();
+          renderMealList(searchInput.value);
+          if(currentMeal === mealKey) showRecipe(mealKey);
+        });
+
+        const span = document.createElement('span');
+        span.className = 'meal-name';
+        span.textContent = extractTitle(meal.content) || mealKey;
+
+        span.addEventListener('click', () => {
+          currentMeal = mealKey;
+          showRecipe(mealKey);
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-btn';
+        delBtn.textContent = 'Delete';
+        delBtn.title = "Delete meal";
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteMeal(mealKey);
+        });
+
+        li.appendChild(favBtn);
+        li.appendChild(span);
+        li.appendChild(delBtn);
+        mealList.appendChild(li);
+      });
+
+    if(mealList.children.length === 0) {
+      mealList.innerHTML = '<em>No meals found matching your filters.</em>';
+    }
+  }
+
+  function showRecipe(meal) {
+    const mealObj = recipes[meal];
+    if(!mealObj) {
+      recipeDiv.innerHTML = '<em>Recipe not found.</em>';
+      return;
+    }
+    recipeDiv.innerHTML = `
+      <div>
+        ${mealObj.content}
+        <p><strong>Category:</strong> ${mealObj.category}</p>
+        <button id="edit-btn">Edit</button>
+      </div>
+    `;
+
+    document.getElementById('edit-btn').addEventListener('click', () => {
+      openEditForm(meal);
+    });
+  }
+
+  function openEditForm(meal) {
+    const mealObj = recipes[meal];
+    if(!mealObj) return;
+
+    const title = extractTitle(mealObj.content) || meal;
+    const ingredients = extractIngredients(mealObj.content);
+    const instructions = extractInstructions(mealObj.content);
+
+    recipeDiv.innerHTML = `
+      <h3>Edit Meal: ${title}</h3>
+      <form id="edit-form">
+        <label>Meal Name:<br>
+          <input type="text" id="edit-title" value="${title}" required>
+        </label>
+        <label>Category:<br>
+          <select id="edit-category" required>
+            <option value="Breakfast" ${mealObj.category==='Breakfast'?'selected':''}>Breakfast</option>
+            <option value="Lunch" ${mealObj.category==='Lunch'?'selected':''}>Lunch</option>
+            <option value="Dinner" ${mealObj.category==='Dinner'?'selected':''}>Dinner</option>
+            <option value="Snack" ${mealObj.category==='Snack'?'selected':''}>Snack</option>
+          </select>
+        </label>
+        <label>Ingredients (one per line):<br>
+          <textarea id="edit-ingredients" rows="6" required>${ingredients}</textarea>
+        </label>
+        <label>Instructions:<br>
+          <textarea id="edit-instructions" rows="6" required>${instructions}</textarea>
+        </label>
+        <button type="submit">Save</button>
+        <button type="button" id="cancel-btn">Cancel</button>
+      </form>
+    `;
+
+    document.getElementById('edit-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveEdits(meal);
+    });
+
+    document.getElementById('cancel-btn').addEventListener('click', () => {
+      showRecipe(meal);
+    });
+  }
+
+  function saveEdits(meal) {
+    const newTitle = document.getElementById('edit-title').value.trim();
+    const newCategory = document.getElementById('edit-category').value;
+    const newIngredients = document.getElementById('edit-ingredients').value.trim().split('\n');
+    const newInstructions = document.getElementById('edit-instructions').value.trim();
+
+    if (!newTitle) {
+      alert('Meal name cannot be empty.');
+      return;
+    }
+
+    if(newTitle !== meal && recipes.hasOwnProperty(newTitle)) {
+      alert('A meal with this name already exists.');
+      return;
+    }
+
+    const newRecipeHTML = `
+      <h2>${newTitle}</h2>
+      <ul>
+        ${newIngredients.map(item => `<li>${item}</li>`).join('')}
+      </ul>
+      <p>${newInstructions}</p>
+    `;
+
+    if (newTitle !== meal) {
+      recipes[newTitle] = {
+        category: newCategory,
+        favorite: recipes[meal].favorite,
+        content: newRecipeHTML
+      };
+      delete recipes[meal];
+      currentMeal = newTitle;
+    } else {
+      recipes[meal] = {
+        category: newCategory,
+        favorite: recipes[meal].favorite,
+        content: newRecipeHTML
+      };
+      currentMeal = meal;
+    }
+
+    saveToStorage();
+    renderMealList(searchInput.value);
+    showRecipe(currentMeal);
+  }
+
+  function deleteMeal(meal) {
+    if (confirm(`Are you sure you want to delete "${extractTitle(recipes[meal].content) || meal}"?`)) {
+      delete recipes[meal];
+      saveToStorage();
+      renderMealList(searchInput.value);
+      recipeDiv.innerHTML = '<em>Select a meal to see the recipe!</em>';
+      currentMeal = null;
+    }
+  }
+
+  function saveToStorage() {
+    localStorage.setItem('recipes', JSON.stringify(recipes));
+  }
+
+  function addNewMeal() {
+    const newTitle = document.getElementById('add-title').value.trim();
+    const newCategory = document.getElementById('add-category').value;
+    const newIngredients = document.getElementById('add-ingredients').value.trim().split('\n');
+    const newInstructions = document.getElementById('add-instructions').value.trim();
+
+    if (!newTitle) {
+      alert('Meal name cannot be empty.');
+      return;
+    }
+    if (recipes.hasOwnProperty(newTitle)) {
+      alert('A meal with this name already exists.');
+      return;
+    }
+
+    const newRecipeHTML = `
+      <h2>${newTitle}</h2>
+      <ul>
+        ${newIngredients.map(item => `<li>${item}</li>`).join('')}
+      </ul>
+      <p>${newInstructions}</p>
+    `;
+
+    recipes[newTitle] = {
+      category: newCategory,
+      favorite: false,
+      content: newRecipeHTML
+    };
+
+    saveToStorage();
+    renderMealList(searchInput.value);
+    currentMeal = newTitle;
+    showRecipe(newTitle);
+  }
+
+  addNewBtn.addEventListener('click', () => {
+    currentMeal = null;
+    recipeDiv.innerHTML = `
+      <h3>Add New Meal</h3>
+      <form id="add-form">
+        <label>Meal Name:<br>
+          <input type="text" id="add-title" required>
+        </label>
+        <label>Category:<br>
+          <select id="add-category" required>
+            <option value="Breakfast">Breakfast</option>
+            <option value="Lunch">Lunch</option>
+            <option value="Dinner" selected>Dinner</option>
+            <option value="Snack">Snack</option>
+          </select>
+        </label>
+        <label>Ingredients (one per line):<br>
+          <textarea id="add-ingredients" rows="6" required></textarea>
+        </label>
+        <label>Instructions:<br>
+          <textarea id="add-instructions" rows="6" required></textarea>
+        </label>
+        <button type="submit">Add Meal</button>
+        <button type="button" id="cancel-add-btn">Cancel</button>
+      </form>
+    `;
+
+    document.getElementById('add-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      addNewMeal();
+    });
+
+    document.getElementById('cancel-add-btn').addEventListener('click', () => {
+      recipeDiv.innerHTML = '<em>Select a meal to see the recipe!</em>';
+    });
+  });
+
+  // Category filter buttons
+  categoryButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      categoryButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentCategory = btn.getAttribute('data-category');
+      renderMealList(searchInput.value);
+      recipeDiv.innerHTML = '<em>Select a meal to see the recipe!</em>';
+      currentMeal = null;
+      favCheckbox.checked = false;
+      showFavoritesOnly = false;
+    });
+  });
+
+  // Favorite filter checkbox
+  favCheckbox.addEventListener('change', () => {
+    showFavoritesOnly = favCheckbox.checked;
+    if(showFavoritesOnly) {
+      categoryButtons.forEach(b => b.classList.remove('active'));
+      categoryButtons[0].classList.add('active'); // All
+      currentCategory = 'All';
+    }
+    renderMealList(searchInput.value);
+    recipeDiv.innerHTML = '<em>Select a meal to see the recipe!</em>';
+    currentMeal = null;
+  });
+
+  // Search input event
+  searchInput.addEventListener('input', () => {
+    renderMealList(searchInput.value);
+    recipeDiv.innerHTML = '<em>Select a meal to see the recipe!</em>';
+    currentMeal = null;
+  });
+
+  // Export to JSON file
+  exportBtn.addEventListener('click', () => {
+    const dataStr = JSON.stringify(recipes, null, 2);
+    const blob = new Blob([dataStr], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'meals_export.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // Import from JSON file
+  importBtn.addEventListener('click', () => {
+    importFileInput.click();
+  });
+
+  importFileInput.addEventListener('change', () => {
+    const file = importFileInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const imported = JSON.parse(e.target.result);
+        if(typeof imported !== 'object' || Array.isArray(imported)) throw 'Invalid format';
+        recipes = {...recipes, ...imported};
+        saveToStorage();
+        renderMealList(searchInput.value);
+        recipeDiv.innerHTML = '<em>Select a meal to see the recipe!</em>';
+        currentMeal = null;
+        alert('Import successful!');
+      } catch (err) {
+        alert('Failed to import: Invalid JSON format.');
+      }
+    };
+    reader.readAsText(file);
+    importFileInput.value = '';
+  });
+
+  // Initial render
+  renderMealList();
+
+  // For debugging: show recipes in console
+  console.log('Loaded recipes:', recipes);
+
+</script>
+
+</body>
+</html>
